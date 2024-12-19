@@ -1,3 +1,4 @@
+
 package org.poo.main;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -8,7 +9,11 @@ import org.poo.fileio.*;
 import org.poo.utils.Utils;
 import java.util.*;
 
-public class CommandProcessor {
+/**
+ * The CommandProcessor class is responsible for processing various commands related to users,
+ * accounts, transactions, and other operations in the system.
+ */
+public final class CommandProcessor {
 
     private static CommandProcessor instance;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -16,24 +21,46 @@ public class CommandProcessor {
     private final Map<String, User> usersMap = new LinkedHashMap<>();
     private final List<ExchangeRate> exchangeRates = new ArrayList<>();
 
-    private CommandProcessor(ArrayNode output) {
+    /**
+     * Private constructor to enforce singleton pattern.
+     *
+     * @param output The output ArrayNode for storing results.
+     */
+    private CommandProcessor(final ArrayNode output) {
         this.output = output;
     }
 
-    public static CommandProcessor getInstance(ArrayNode output) {
+    /**
+     * Retrieves the singleton instance of CommandProcessor.
+     *
+     * @param output The output ArrayNode for storing results.
+     * @return The singleton instance of CommandProcessor.
+     */
+    public static CommandProcessor getInstance(final ArrayNode output) {
         if (instance == null) {
             instance = new CommandProcessor(output);
         }
         return instance;
     }
 
+    /**
+     * Resets the singleton instance of CommandProcessor.
+     */
     public static void resetInstance() {
         instance = null;
     }
 
-    public void initializeUsersAndExchangeRates(List<UserInput> users, List<ExchangeInput> rates) {
+    /**
+     * Initializes the users and exchange rates based on the provided input.
+     *
+     * @param users A list of user input data.
+     * @param rates A list of exchange rate input data.
+     */
+    public void initializeUsersAndExchangeRates(final List<UserInput> users,
+                                                final List<ExchangeInput> rates) {
         for (UserInput user : users) {
-            usersMap.put(user.getEmail(), new User(user.getFirstName(), user.getLastName(), user.getEmail()));
+            usersMap.put(user.getEmail(), new User(user.getFirstName(),
+                    user.getLastName(), user.getEmail()));
         }
 
         for (ExchangeInput rate : rates) {
@@ -42,8 +69,14 @@ public class CommandProcessor {
         }
     }
 
-    public void processCommands(ObjectInput inputData) {
-        initializeUsersAndExchangeRates(Arrays.asList(inputData.getUsers()), Arrays.asList(inputData.getExchangeRates()));
+    /**
+     * Processes a list of commands and performs corresponding actions.
+     *
+     * @param inputData The input data containing users, exchange rates, and commands.
+     */
+    public void processCommands(final ObjectInput inputData) {
+        initializeUsersAndExchangeRates(Arrays.asList(inputData.getUsers()),
+                Arrays.asList(inputData.getExchangeRates()));
 
         for (CommandInput command : inputData.getCommands()) {
             switch (command.getCommand()) {
@@ -98,14 +131,18 @@ public class CommandProcessor {
                 case "spendingsReport":
                     handleSpendingsReport(command);
                     break;
-
-
                 default:
                     handleUnknownCommand(command);
             }
         }
     }
-    private void handlePrintUsers(int timestamp) {
+
+    /**
+     * Handles the "printUsers" command, printing the list of users and their accounts.
+     *
+     * @param timestamp The timestamp of the command.
+     */
+    private void handlePrintUsers(final int timestamp) {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", "printUsers");
 
@@ -144,8 +181,12 @@ public class CommandProcessor {
         output.add(objectNode);
     }
 
-
-    private void handlePrintTansactions(CommandInput command) {
+    /**
+     * Handles the "printTransactions" command, printing the list of transactions for a user.
+     *
+     * @param command The command containing the user's email and timestamp.
+     */
+    private void handlePrintTansactions(final CommandInput command) {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", "printTransactions");
 
@@ -183,23 +224,22 @@ public class CommandProcessor {
                     transactionNode.put("senderIBAN", transaction.getSenderIBAN());
                     transactionNode.put("receiverIBAN", transaction.getReceiverIBAN());
 
-
-                    String amountWithCurrency = transaction.getAmount() + " " + transaction.getCurrency();
+                    String amountWithCurrency = transaction.getAmount()
+                            + " " + transaction.getCurrency();
                     transactionNode.put("amount", amountWithCurrency);
 
-                    String transferType = user.getEmail().equals(transaction.getEmail()) ? "sent" : "received";
+                    String transferType = user.getEmail().equals(transaction.getEmail())
+                            ? "sent" : "received";
                     transactionNode.put("transferType", transferType);
                     break;
 
                 case "paySucessful":
                     transactionNode.put("timestamp", transaction.getTimestamp());
                     transactionNode.put("description", transaction.getDescription());
-                {
                     double amount = transaction.getAmount();
                     transactionNode.put("amount", amount);
-                }
-                transactionNode.put("commerciant", transaction.getCommerciant());
-                break;
+                    transactionNode.put("commerciant", transaction.getCommerciant());
+                    break;
 
                 case "payNoFunds":
                     transactionNode.put("timestamp", transaction.getTimestamp());
@@ -259,26 +299,24 @@ public class CommandProcessor {
         output.add(objectNode);
     }
 
-    private void handleAddAccount(CommandInput command) {
+    /**
+     * Handles the addition of a new account for a user.
+     *
+     * @param command The command containing the user's email and account details.
+     */
+    private void handleAddAccount(final CommandInput command) {
         User user = usersMap.get(command.getEmail());
         if (user != null) {
-            String iban = Utils.generateIBAN();
-            String accountType = command.getAccountType();
-            double interestRate = 0.0;
-
-            if ("savings".equals(accountType)) {
-                interestRate = command.getInterestRate();
-            }
-
-            Account account = new Account(iban, command.getCurrency(), accountType, interestRate);
-            user.addAccount(account);
-
-            Transaction transaction = new Transaction("addAccount", command.getTimestamp(), "New account created");
-            user.addTransaction(transaction);
+            user.addAccount(command);
         }
     }
 
-    private void handleCreateCard(CommandInput command) {
+    /**
+     * Handles the creation of a card for a user.
+     *
+     * @param command The command containing the user's email, account number, and timestamp.
+     */
+    private void handleCreateCard(final CommandInput command) {
         String email = command.getEmail();
         String accountNumber = command.getAccount();
         int timestamp = command.getTimestamp();
@@ -288,51 +326,27 @@ public class CommandProcessor {
         if (user == null) {
             return;
         }
-
-        Account targetAccount = null;
-        for (Account account : user.getAccounts()) {
-            if (account.getAccountNumber().equalsIgnoreCase(accountNumber)) {
-                targetAccount = account;
-                break;
-            }
-        }
-
-        if (targetAccount == null) {
-            return;
-        }
-
-        String cardNumber = Utils.generateCardNumber();
-        Card card = new Card(cardNumber, targetAccount.getAccountNumber(), false);
-        targetAccount.addCard(card);
-        Transaction transaction = new Transaction("addCard", timestamp,
-                "New card created", cardNumber, user.getEmail(), targetAccount.getAccountNumber());
-        user.addTransaction(transaction);
+        user.createCard(accountNumber, timestamp);
     }
 
-
-    private void handleCreateOneTimeCard(CommandInput command) {
+    /**
+     * Handles the creation of a one-time card for a user.
+     *
+     * @param command The command containing the user's email and card details.
+     */
+    private void handleCreateOneTimeCard(final CommandInput command) {
         User user = usersMap.get(command.getEmail());
-        String accountNbr = null;
-        String cardNumber = null;
-
         if (user != null) {
-            for (Account account : user.getAccounts()) {
-                if (account.getAccountNumber().equals(command.getAccount())) {
-                    cardNumber = Utils.generateCardNumber();
-                    accountNbr = account.getAccountNumber();
-                    Card card = new Card(cardNumber, account.getAccountNumber(), true);
-                    account.addCard(card);
-                    break;
-                }
-            }
-
-            Transaction transaction = new Transaction("addCard", command.getTimestamp(),
-                    "New card created", cardNumber, user.getEmail(), accountNbr);
-            user.addTransaction(transaction);
+            user.createOneTimeCard(command);
         }
     }
 
-    private void handleAddFunds(CommandInput command) {
+    /**
+     * Adds funds to an account.
+     *
+     * @param command The command containing the account number and amount to be added.
+     */
+    private void handleAddFunds(final CommandInput command) {
         for (User user : usersMap.values()) {
             for (Account account : user.getAccounts()) {
                 if (account.getAccountNumber().equals(command.getAccount())) {
@@ -344,114 +358,95 @@ public class CommandProcessor {
         }
     }
 
-    private void handleDeleteAccount(CommandInput command) {
+    /**
+     * Handles the deletion of an account for a user.
+     *
+     * @param command The command containing the user's email and account details.
+     */
+    private void handleDeleteAccount(final CommandInput command) {
         ObjectNode responseNode = objectMapper.createObjectNode();
         responseNode.put("command", "deleteAccount");
 
         if (command.getEmail() == null || !usersMap.containsKey(command.getEmail())) {
-            ObjectNode outputNode = objectMapper.createObjectNode();
-            outputNode.put("error", "User not found");
-            outputNode.put("timestamp", command.getTimestamp());
-
-            responseNode.set("output", outputNode);
-            output.add(responseNode);
+            addErrorToResponse(responseNode, "User not found", command.getTimestamp());
             return;
         }
 
         User user = usersMap.get(command.getEmail());
-        boolean deleted = user.getAccounts().removeIf(account -> {
-            if (!account.getAccountNumber().equals(command.getAccount())) {
-                return false;
-            }
-            if (account.getBalance() != 0) {
-                return false;
-            }
-            account.getCards().clear();
-            return true;
-        });
+
+        boolean deleted = user.deleteAccount(command.getAccount());
 
         ObjectNode outputNode = objectMapper.createObjectNode();
         if (deleted) {
             outputNode.put("success", "Account deleted");
         } else {
-            outputNode.put("error", "Account couldn't be deleted - see org.poo.transactions for details");
+            outputNode.put("error",
+                    "Account couldn't be deleted - see org.poo.transactions for details");
         }
         outputNode.put("timestamp", command.getTimestamp());
 
         responseNode.set("output", outputNode);
         responseNode.put("timestamp", command.getTimestamp());
         output.add(responseNode);
-
     }
 
-    private void handleDeleteCard(CommandInput command) {
+    /**
+     * Adds an error message to the response node.
+     *
+     * @param responseNode The response node to which the error will be added.
+     * @param errorMessage The error message to add.
+     * @param timestamp    The timestamp of the command.
+     */
+    private void addErrorToResponse(final ObjectNode responseNode,
+                                    final String errorMessage,
+                                    final int timestamp) {
+        ObjectNode outputNode = objectMapper.createObjectNode();
+        outputNode.put("error", errorMessage);
+        outputNode.put("timestamp", timestamp);
+
+        responseNode.set("output", outputNode);
+        output.add(responseNode);
+    }
+
+    /**
+     * Handles the deletion of a card for a user.
+     *
+     * @param command The command containing the user's email, card number, and timestamp.
+     */
+    private void handleDeleteCard(final CommandInput command) {
         ObjectNode responseNode = objectMapper.createObjectNode();
         responseNode.put("command", "deleteCard");
         responseNode.put("timestamp", command.getTimestamp());
 
-
         if (command.getEmail() == null || !usersMap.containsKey(command.getEmail())) {
-            ObjectNode outputNode = objectMapper.createObjectNode();
-            outputNode.put("error", "User not found");
-            responseNode.set("output", outputNode);
-            output.add(responseNode);
+            addErrorToResponse(responseNode, "User not found", command.getTimestamp());
             return;
         }
+
         if (command.getCardNumber() == null || command.getCardNumber().isEmpty()) {
-            ObjectNode outputNode = objectMapper.createObjectNode();
-            outputNode.put("error", "Card number is missing");
-            responseNode.set("output", outputNode);
-            output.add(responseNode);
+            addErrorToResponse(responseNode, "Card number is missing", command.getTimestamp());
             return;
         }
 
         User user = usersMap.get(command.getEmail());
-        boolean cardDeleted = false;
 
+        Transaction deleteCardTransaction =
+                user.deleteCard(
+                        command.getCardNumber(), command.getTimestamp());
 
-        Iterator<Card> cardIterator = user.getCards().iterator();
-        while (cardIterator.hasNext()) {
-            Card card = cardIterator.next();
-            if (card.getCardNumber().equals(command.getCardNumber())) {
-                cardIterator.remove();
-                cardDeleted = true;
-                break;
-            }
-        }
-
-        String deletedCardNumber = null;
-        String associatedAccount = null;
-        for (Account account : user.getAccounts()) {
-            Iterator<Card> accountCardIterator = account.getCards().iterator();
-            while (accountCardIterator.hasNext()) {
-                Card card = accountCardIterator.next();
-                if (card.getCardNumber().equals(command.getCardNumber())) {
-                    deletedCardNumber = card.getCardNumber();
-                    associatedAccount = card.getAccountNumber();
-                    accountCardIterator.remove();
-                    cardDeleted = true;
-                    break;
-                }
-            }
-        }
-
-        if (cardDeleted) {
-            Transaction deleteCardTransaction = new Transaction(
-                    "deleteCard",
-                    command.getTimestamp(),
-                    "The card has been destroyed"
-
-            );
-            deleteCardTransaction.setCardNumber(deletedCardNumber);
-            deleteCardTransaction.setEmail(user.getEmail());
-            if (associatedAccount != null) {
-                deleteCardTransaction.setAccountNumber(associatedAccount);
-            }
+        if (deleteCardTransaction != null) {
             user.addTransaction(deleteCardTransaction);
+        } else {
+            addErrorToResponse(responseNode, "Card not found", command.getTimestamp());
         }
     }
 
-    private void handleSetMinBalance(CommandInput command) {
+    /**
+     * Handles setting the minimum balance for a specific account.
+     *
+     * @param command The command containing the account details and the minimum balance amount.
+     */
+    private void handleSetMinBalance(final CommandInput command) {
         if (command.getAccount() == null || command.getAccount().isEmpty()) {
             return;
         }
@@ -460,16 +455,19 @@ public class CommandProcessor {
         }
 
         for (User user : usersMap.values()) {
-            for (Account account : user.getAccounts()) {
-                if (account.getAccountNumber().equals(command.getAccount())) {
-                    account.setMinBalance(command.getAmount());
-                    return;
-                }
+            if (user.setAccountMinBalance(command.getAccount(), command.getAmount())) {
+                return;
             }
         }
     }
 
-    private void handlePayOnline(CommandInput command) {
+    /**
+     * Handles processing an online payment command.
+     *
+     * @param command The command containing details of the payment,
+     *                such as card number, amount, and currency.
+     */
+    private void handlePayOnline(final CommandInput command) {
         ObjectNode responseNode = objectMapper.createObjectNode();
         responseNode.put("command", "payOnline");
 
@@ -484,90 +482,31 @@ public class CommandProcessor {
             return;
         }
 
-        boolean cardFound = processTransaction(user, command, responseNode);
+        boolean cardFound = user.processTransaction(command, responseNode, this);
         if (!cardFound) {
             addCardNotFoundOutput(responseNode, command.getTimestamp());
         }
     }
-    private boolean processTransaction(User user, CommandInput command, ObjectNode responseNode) {
-        for (Account account : user.getAccounts()) {
-            for (Card card : account.getCards()) {
-                if (card.getCardNumber().equals(command.getCardNumber())) {
-                    if (isCardFrozen(card)) {
-                        Transaction payFrosen = new Transaction(
-                                "payFrosen",
-                                command.getTimestamp(),
-                                "The card is frozen"
-                        );
-                        payFrosen.setAccountNumber(account.getAccountNumber());
-                        user.addTransaction(payFrosen);
 
-                        return true;
-                    }
-
-                    double transactionAmount = calculateTransactionAmount(command, account);
-                    if (transactionAmount < 0) {
-                        return true;
-                    }
-
-                    if (!isBalanceSufficient(account, transactionAmount)) {
-                        Transaction payNoFundsTransaction = new Transaction(
-                                "payNoFunds",
-                                command.getTimestamp(),
-                                "Insufficient funds"
-                        );
-                        payNoFundsTransaction.setAccountNumber(account.getAccountNumber());
-                        user.addTransaction(payNoFundsTransaction);
-                        return true;
-                    }
-                    updateAccountBalance(account, transactionAmount);
-
-                    Transaction paySuccessfulTransaction = new Transaction(
-                            "paySucessful",
-                            command.getTimestamp(),
-                            "Card payment"
-                    );
-                    paySuccessfulTransaction.setAmount(transactionAmount);
-                    paySuccessfulTransaction.setCommerciant(command.getCommerciant());
-                    paySuccessfulTransaction.setAccountNumber(account.getAccountNumber());
-                    user.addTransaction(paySuccessfulTransaction);
-
-                    if (card.isOneTime()) {
-                        handleOneTimeCard(account, card, user, command.getTimestamp());
-                    }
-
-                    responseNode.put("timestamp", command.getTimestamp());
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-
-    private void handleOneTimeCard(Account account, Card card, User user, int timestamp) {
-        card.setStatus("frozen");
-        String newCardNumber = Utils.generateCardNumber();
-
-        card.setCardNumber(newCardNumber);
-        card.setStatus("active");
-        Transaction updateCardNumberTransaction = new Transaction(
-                "updateOneTimeCard",
-                timestamp,
-                "One-time card number regenerated"
-        );
-        updateCardNumberTransaction.setCardNumber(newCardNumber);
-        updateCardNumberTransaction.setEmail(user.getEmail());
-        updateCardNumberTransaction.setAccountNumber(account.getAccountNumber());
-        user.addTransaction(updateCardNumberTransaction);
-    }
-
-    private boolean isInvalidCommand(CommandInput command) {
+    /**
+     * Checks if the provided command is invalid.
+     *
+     * @param command The command to validate.
+     * @return True if the command is invalid, otherwise false.
+     */
+    private boolean isInvalidCommand(final CommandInput command) {
         return command.getCardNumber() == null || command.getCardNumber().isEmpty()
                 || command.getAmount() <= 0 || command.getCurrency() == null;
     }
 
-    private void addCardNotFoundOutput(ObjectNode responseNode, int timestamp) {
+    /**
+     * Adds a "Card not found" error message to the response node.
+     *
+     * @param responseNode The response node to which the error will be added.
+     * @param timestamp    The timestamp of the command.
+     */
+    private void addCardNotFoundOutput(final ObjectNode responseNode,
+                                       final int timestamp) {
         ObjectNode outputNode = objectMapper.createObjectNode();
         outputNode.put("timestamp", timestamp);
         outputNode.put("description", "Card not found");
@@ -576,52 +515,47 @@ public class CommandProcessor {
         output.add(responseNode);
     }
 
-    private boolean isCardFrozen(Card card) {
-        return "frozen".equalsIgnoreCase(card.getStatus());
-    }
-
-    private double calculateTransactionAmount(CommandInput command, Account account) {
-        if (command.getCurrency().equalsIgnoreCase(account.getCurrency())) {
-            return command.getAmount();
-        }
-
-        double conversionRate = getExchangeRateFromTo(command.getCurrency(), account.getCurrency());
-        if (conversionRate == 0) {
-            return -1;
-        }
-
-        double amount = command.getAmount() * conversionRate;
-        return amount;
-    }
-
-    private boolean isBalanceSufficient(Account account, double transactionAmount) {
-        return account.getBalance() >= transactionAmount;
-    }
-
-    private void updateAccountBalance(Account account, double transactionAmount) {
-        double newBalance = account.getBalance() - transactionAmount;
-        account.setBalance(newBalance);
-    }
-
-    public double getExchangeRateFromTo(String from, String to) {
+    /**
+     * Retrieves the exchange rate between two currencies.
+     *
+     * @param from The currency to convert from.
+     * @param to   The currency to convert to.
+     * @return The exchange rate, or 0 if no rate is found.
+     */
+    public double getExchangeRateFromTo(final String from,
+                                        final String to) {
         return findExchangeRate(from, to, new HashSet<>());
     }
 
-    private double findExchangeRate(String from, String to, Set<String> visited) {
+    /**
+     * Recursively finds the exchange rate between two currencies, considering
+     * intermediate conversions.
+     *
+     * @param from    The starting currency.
+     * @param to      The target currency.
+     * @param visited A set of visited currencies to prevent cyclic searches.
+     * @return The calculated exchange rate, or 0 if no valid conversion is found.
+     */
+    private double findExchangeRate(final String from,
+                                    final String to,
+                                    final Set<String> visited) {
         if (from.equalsIgnoreCase(to)) {
             return 1.0;
         }
 
         visited.add(from.toUpperCase());
         for (ExchangeRate exchangeRate : exchangeRates) {
-            if (exchangeRate.getFromCurrency().equalsIgnoreCase(from) && exchangeRate.getToCurrency().equalsIgnoreCase(to)) {
+            if (exchangeRate.getFromCurrency().equalsIgnoreCase(from)
+                    && exchangeRate.getToCurrency().equalsIgnoreCase(to)) {
                 return exchangeRate.getRate();
             }
         }
 
         for (ExchangeRate exchangeRate : exchangeRates) {
-            if (exchangeRate.getFromCurrency().equalsIgnoreCase(from) && !visited.contains(exchangeRate.getToCurrency().toUpperCase())) {
-                double intermediateRate = findExchangeRate(exchangeRate.getToCurrency(), to, visited);
+            if (exchangeRate.getFromCurrency().equalsIgnoreCase(from)
+                    && !visited.contains(exchangeRate.getToCurrency().toUpperCase())) {
+                double intermediateRate =
+                        findExchangeRate(exchangeRate.getToCurrency(), to, visited);
                 if (intermediateRate > 0) {
                     return exchangeRate.getRate() * intermediateRate;
                 }
@@ -630,14 +564,19 @@ public class CommandProcessor {
         return 0;
     }
 
-
-    private void handleSendMoney(CommandInput command) {
+    /**
+     * Handles the process of sending money between accounts.
+     *
+     * @param command The command containing sender and receiver details, as well
+     *                as the amount to transfer.
+     */
+    private void handleSendMoney(final CommandInput command) {
         User senderUser = usersMap.get(command.getEmail());
         if (senderUser == null) {
             return;
         }
 
-        Account senderAccount = findAccountByIBAN(senderUser, command.getAccount());
+        Account senderAccount = senderUser.findAccountByIBAN(command.getAccount());
         if (senderAccount == null) {
             return;
         }
@@ -646,122 +585,89 @@ public class CommandProcessor {
         if (receiverAccount == null) {
             return;
         }
-        double amount = command.getAmount();
 
-        if (senderAccount.getBalance() < amount) {
-            Transaction insufficientFundsTransaction = new Transaction(
-                    "payNoFunds",
-                    command.getTimestamp(),
-                    "Insufficient funds"
-            );
-            senderUser.addTransaction(insufficientFundsTransaction);
+        if (!senderAccount.canSendFunds(command.getAmount())) {
+            senderUser.addTransaction(
+                    Transaction.createInsufficientFundsTransaction(
+                            command.getTimestamp(), senderAccount.getAccountNumber()));
             return;
         }
 
-        double finalAmount = amount;
-        String senderCurrency = senderAccount.getCurrency();
-        String receiverCurrency = receiverAccount.getCurrency();
-
-        if (!senderCurrency.equals(receiverCurrency)) {
-            double rate = getExchangeRateFromTo(senderCurrency, receiverCurrency);
-            if (rate == 0) {
-                return;
-            }
-            finalAmount = amount * rate;
-            finalAmount = Math.round(finalAmount * 1e9) / 1e9;
+        double convertedAmount =
+                senderAccount.convertAmountIfNecessary(
+                        command.getAmount(), receiverAccount.getCurrency(),
+                        this::getExchangeRateFromTo);
+        if (convertedAmount < 0) {
+            return;
         }
 
-        double newSenderBalance = senderAccount.getBalance() - amount;
-        newSenderBalance = Math.round(newSenderBalance * 1e9) / 1e9;
-        senderAccount.setBalance(newSenderBalance);
+        senderAccount.decreaseBalance(command.getAmount());
+        receiverAccount.increaseBalance(convertedAmount);
 
-        double newReceiverBalance = receiverAccount.getBalance() + finalAmount;
-        newReceiverBalance = Math.round(newReceiverBalance * 1e9) / 1e9;
-        receiverAccount.setBalance(newReceiverBalance);
-
-        Transaction senderTransaction = new Transaction(
-                "sendMoney",
-                command.getTimestamp(),
-                command.getDescription(),
-                senderAccount.getAccountNumber(),
-                receiverAccount.getAccountNumber(),
-                amount,
-                senderCurrency,
-                command.getEmail()
-        );
-        senderUser.addTransaction(senderTransaction);
-
-        Transaction receiverTransaction = new Transaction(
-                "sendMoney",
-                command.getTimestamp(),
-                command.getDescription(),
-                senderAccount.getAccountNumber(),
-                receiverAccount.getAccountNumber(),
-                amount,
-                senderCurrency,
-                command.getEmail()
-        );
+        senderUser.addTransaction(
+                Transaction.createSendMoneyTransaction(
+                        command, senderAccount, receiverAccount));
         User receiverUser = findUserByAccount(receiverAccount.getAccountNumber());
         if (receiverUser != null) {
-            receiverUser.addTransaction(receiverTransaction);
+            receiverUser.addTransaction(
+                    Transaction.createReceiveMoneyTransaction(
+                            command, senderAccount, receiverAccount));
         }
     }
 
-
-    private Account findAccountByIBAN(User user, String iban) {
-        for (Account account : user.getAccounts()) {
-            if (account.getAccountNumber().equals(iban)) {
+    /**
+     * Finds an account globally by its IBAN.
+     *
+     * @param iban The IBAN of the account to find.
+     * @return The account if found, otherwise null.
+     */
+    public Account findAccountByIBANGlobally(final String iban) {
+        for (User user : usersMap.values()) {
+            Account account = user.findAccountByIBAN(iban);
+            if (account != null) {
                 return account;
             }
         }
         return null;
     }
 
-    private Account findAccountByIBANGlobally(String iban) {
-        for (User u : usersMap.values()) {
-            for (Account account : u.getAccounts()) {
-                if (account.getAccountNumber().equals(iban)) {
-                    return account;
-                }
+    /**
+     * Finds a user by an account's IBAN.
+     *
+     * @param iban The IBAN of the account to find the associated user.
+     * @return The user if found, otherwise null.
+     */
+    public User findUserByAccount(final String iban) {
+        for (User user : usersMap.values()) {
+            if (user.findAccountByIBAN(iban) != null) {
+                return user;
             }
         }
         return null;
     }
 
-    private User findUserByAccount(String iban) {
-        for (User u : usersMap.values()) {
-            for (Account account : u.getAccounts()) {
-                if (account.getAccountNumber().equals(iban)) {
-                    return u;
-                }
-            }
-        }
-        return null;
-    }
-
-    private void handleSetAlias(CommandInput command) {
+    /**
+     * Handles setting an alias for an account.
+     *
+     * @param command The command containing the alias and account details.
+     */
+    private void handleSetAlias(final CommandInput command) {
         User user = usersMap.get(command.getEmail());
         if (user == null) {
             return;
         }
 
-        Account targetAccount = null;
-        for (Account account : user.getAccounts()) {
-            if (account.getAccountNumber().equals(command.getAccount())) {
-                targetAccount = account;
-                break;
-            }
-        }
-
-        if (targetAccount == null) {
+        if (!user.setAliasForAccount(command.getAlias(), command.getAccount())) {
             return;
         }
-
-        user.setAlias(command.getAlias(), command.getAccount());
-
     }
 
-    private void handleCheckCardStatus(CommandInput command) {
+    /**
+     * Handles checking the status of a card.
+     *
+     * @param command The command containing card details and a timestamp.
+     */
+    private void handleCheckCardStatus(final CommandInput command) {
         ObjectNode responseNode = objectMapper.createObjectNode();
         responseNode.put("command", "checkCardStatus");
 
@@ -770,50 +676,40 @@ public class CommandProcessor {
             return;
         }
 
-        Card foundCard = null;
-        Account foundAccount = null;
-        User foundUser = null;
-        for (User u : usersMap.values()) {
-            for (Account acc : u.getAccounts()) {
-                for (Card c : acc.getCards()) {
-                    if (c.getCardNumber().equals(command.getCardNumber())) {
-                        foundCard = c;
-                        foundAccount = acc;
-                        foundUser = u;
-                        break;
-                    }
-                }
-                if (foundCard != null) break;
-            }
-            if (foundCard != null) break;
-        }
-
-        if (foundCard == null) {
+        User user = findUserByCard(command.getCardNumber());
+        if (user == null) {
             addCheckCardStatusOutput(responseNode, command.getTimestamp(), "Card not found");
             return;
         }
 
-
-        if ("frozen".equals(foundCard.getStatus())) {
+        Card card = user.findCardByNumber(command.getCardNumber());
+        if (card == null || "frozen".equals(card.getStatus())) {
             return;
         }
 
-        double balance = foundAccount.getBalance();
-        double minBalance = foundAccount.getMinBalance();
-
-        if (balance <= minBalance) {
-            foundCard.setStatus("frozen");
-            Transaction freezeTransaction = new Transaction(
-                    "checkCardStatus",
-                    command.getTimestamp(),
-                    "You have reached the minimum amount of funds, the card will be frozen"
-            );
-            foundUser.addTransaction(freezeTransaction);
+        Account account = user.findAccountByCard(card);
+        if (account == null) {
             return;
+        }
+
+        if (account.isBelowMinimumBalance()) {
+            card.freeze();
+            user.addTransaction(
+                    Transaction.createFreezeTransaction(command.getTimestamp(),
+                            account, card));
         }
     }
 
-    private void addCheckCardStatusOutput(ObjectNode responseNode, int timestamp, String description) {
+    /**
+     * Adds a "Card not found" error message to the response.
+     *
+     * @param responseNode The response node to which the error will be added.
+     * @param timestamp    The timestamp of the command.
+     * @param description  The description of the error.
+     */
+    private void addCheckCardStatusOutput(final ObjectNode responseNode,
+                                          final int timestamp,
+                                          final String description) {
         ObjectNode outputNode = objectMapper.createObjectNode();
         outputNode.put("timestamp", timestamp);
         outputNode.put("description", description);
@@ -822,27 +718,42 @@ public class CommandProcessor {
         output.add(responseNode);
     }
 
-    private void handleChangeInterestRate(CommandInput command) {
-        String iban = command.getAccount();
-        double newInterestRate = command.getInterestRate();
+    /**
+     * Finds a user by a card number.
+     *
+     * @param cardNumber The card number to find the associated user.
+     * @return The user if found, otherwise null.
+     */
+    private User findUserByCard(final String cardNumber) {
+        for (User user : usersMap.values()) {
+            if (user.findCardByNumber(cardNumber) != null) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Handles changing the interest rate for an account.
+     *
+     * @param command The command containing account details, interest rate, and timestamp.
+     */
+    private void handleChangeInterestRate(final CommandInput command) {
         User user = usersMap.get(command.getEmail());
         if (user == null) {
             return;
         }
 
-        Account account = null;
-        for (Account acc : user.getAccounts()) {
-            if (acc.getAccountNumber().equals(iban)) {
-                account = acc;
-                break;
-            }
-        }
 
-        if (account == null) {
-            return;
-        }
+        boolean success = user.changeAccountInterestRate(
+                command.getAccount(),
+                command.getInterestRate(),
+                command.getTimestamp(),
+                output,
+                objectMapper
+        );
 
-        if (!"savings".equalsIgnoreCase(account.getAccountType())) {
+        if (!success) {
             ObjectNode responseNode = objectMapper.createObjectNode();
             responseNode.put("command", "changeInterestRate");
 
@@ -853,124 +764,175 @@ public class CommandProcessor {
             responseNode.set("output", outputNode);
             responseNode.put("timestamp", command.getTimestamp());
             output.add(responseNode);
-
-            return;
         }
-
-        account.setInterestRate(newInterestRate);
-
-        String description = "Interest rate changed to " + newInterestRate + "%";
-        Transaction changeInterestRateTransaction = new Transaction(
-                "changeInterestRate",
-                command.getTimestamp(),
-                description
-        );
-        user.addTransaction(changeInterestRateTransaction);
     }
 
-    private void handleSplitPayment(CommandInput command) {
+    /**
+     * Handles splitting a payment among multiple accounts.
+     *
+     * @param command The command containing the accounts, total amount, currency, and timestamp.
+     */
+    private void handleSplitPayment(final CommandInput command) {
         List<String> accountsForSplit = command.getAccounts();
         double totalAmount = command.getAmount();
         String currency = command.getCurrency();
         int timestamp = command.getTimestamp();
 
-        int numberOfAccounts = accountsForSplit.size();
-
-        if (numberOfAccounts == 0) {
+        if (accountsForSplit.isEmpty()) {
             return;
         }
 
-        double share = totalAmount / numberOfAccounts;
+        double share = totalAmount / accountsForSplit.size();
         List<Account> accounts = new ArrayList<>();
         List<User> involvedUsers = new ArrayList<>();
-        boolean canProceed = true;
 
+        if (!prepareAccountsAndUsers(accountsForSplit, accounts, involvedUsers)) {
+            handleSplitPaymentFailure(accountsForSplit, timestamp);
+            return;
+        }
+
+        if (!validateBalancesAndCurrency(accounts, share, currency)) {
+            handleSplitPaymentFailure(accountsForSplit, timestamp);
+            return;
+        }
+
+        executeSplitPayment(accounts, involvedUsers, share,
+                currency, timestamp, accountsForSplit, totalAmount);
+    }
+
+    /**
+     * Prepares the accounts and users involved in the split payment.
+     *
+     * @param accountsForSplit The list of account IBANs for the split payment.
+     * @param accounts         The list to store valid accounts.
+     * @param involvedUsers    The list to store corresponding users of the accounts.
+     * @return True if all accounts and users are valid, otherwise false.
+     */
+    private boolean prepareAccountsAndUsers(final List<String> accountsForSplit,
+                                            final List<Account> accounts,
+                                            final List<User> involvedUsers) {
         for (String iban : accountsForSplit) {
             Account account = findAccountByIBANGlobally(iban);
             if (account == null) {
-                canProceed = false;
-                break;
+                return false;
             }
             accounts.add(account);
+
             User user = findUserByAccount(iban);
             if (user == null) {
-                canProceed = false;
-                break;
+                return false;
             }
             involvedUsers.add(user);
         }
+        return true;
+    }
 
-        if (canProceed) {
-            for (Account account : accounts) {
-                double convertedShare = share;
-                if (!currency.equalsIgnoreCase(account.getCurrency())) {
-                    double rate = getExchangeRateFromTo(currency, account.getCurrency());
-                    if (rate == 0) {
-                        canProceed = false;
-                        break;
-                    }
-                    convertedShare = share * rate;
-                }
-                if (account.getBalance() < convertedShare) {
-                    canProceed = false;
-                    break;
-                }
+    /**
+     * Validates that all accounts have sufficient balances and use compatible currencies.
+     *
+     * @param accounts The list of accounts to validate.
+     * @param share    The share amount to be deducted from each account.
+     * @param currency The currency of the payment.
+     * @return True if all validations pass, otherwise false.
+     */
+    private boolean validateBalancesAndCurrency(final List<Account> accounts,
+                                                final double share,
+                                                final String currency) {
+        for (Account account : accounts) {
+            double convertedShare = calculateConvertedShare(account, share, currency);
+            if (convertedShare < 0 || account.getBalance() < convertedShare) {
+                return false;
             }
         }
+        return true;
+    }
 
-        if (canProceed) {
-            for (Account account : accounts) {
-                double convertedShare = share;
-                if (!currency.equalsIgnoreCase(account.getCurrency())) {
-                    double rate = getExchangeRateFromTo(currency, account.getCurrency());
-                    convertedShare = share * rate;
-                }
-                account.setBalance(account.getBalance() - convertedShare);
+    /**
+     * Calculates the converted share amount based on the account's currency.
+     *
+     * @param account  The account for which the share is calculated.
+     * @param share    The share amount in the original currency.
+     * @param currency The original currency.
+     * @return The converted share amount, or -1 if the conversion fails.
+     */
+    private double calculateConvertedShare(final Account account,
+                                           final double share,
+                                           final String currency) {
+        if (currency.equalsIgnoreCase(account.getCurrency())) {
+            return share;
+        }
+
+        double rate = getExchangeRateFromTo(currency, account.getCurrency());
+        return rate > 0 ? share * rate : -1;
+    }
+
+    /**
+     * Executes the split payment by deducting shares from accounts and creating transactions.
+     *
+     * @param accounts     The list of accounts involved in the payment.
+     * @param users        The list of users owning the accounts.
+     * @param share        The share amount for each account.
+     * @param currency     The currency of the payment.
+     * @param timestamp    The timestamp of the command.
+     * @param involvedIBANs The list of IBANs involved in the payment.
+     * @param totalAmount  The total amount of the split payment.
+     */
+    private void executeSplitPayment(final List<Account> accounts,
+                                     final List<User> users,
+                                     final double share,
+                                     final String currency,
+                                     final int timestamp,
+                                     final List<String> involvedIBANs,
+                                     final double totalAmount) {
+        for (Account account : accounts) {
+            double convertedShare = calculateConvertedShare(account, share, currency);
+            account.setBalance(account.getBalance() - convertedShare);
+        }
+
+        for (int i = 0; i < accounts.size(); i++) {
+            Account account = accounts.get(i);
+            User user = users.get(i);
+
+            String description = String.format("Split payment of %.2f %s", totalAmount, currency);
+            Transaction splitPaymentTransaction =
+                    new Transaction("splitPayment", timestamp, description);
+            splitPaymentTransaction.setCurrency(currency);
+            splitPaymentTransaction.setAmount(share);
+            splitPaymentTransaction.setInvolvedIBANs(new ArrayList<>(involvedIBANs));
+            user.addTransaction(splitPaymentTransaction);
+        }
+    }
+
+    /**
+     * Handles a failure during a split payment by creating failed
+     * transactions for affected accounts.
+     *
+     * @param accountsForSplit The list of account IBANs involved in the failed payment.
+     * @param timestamp        The timestamp of the failure.
+     */
+    private void handleSplitPaymentFailure(final List<String> accountsForSplit,
+                                           final int timestamp) {
+        for (String iban : accountsForSplit) {
+            Account account = findAccountByIBANGlobally(iban);
+            if (account == null) {
+                continue;
             }
-
-            List<String> involvedIBANs = new ArrayList<>(accountsForSplit);
-
-            for (Account account : accounts) {
-                User user = findUserByAccount(account.getAccountNumber());
-                if (user != null) {
-                    String description = String.format("Split payment of %.2f %s", totalAmount, currency);
-                    if (!currency.equalsIgnoreCase(account.getCurrency())) {
-                        double rate = getExchangeRateFromTo(currency, account.getCurrency());
-                        double convertedShare = share * rate;
-                    }
-
-                    Transaction splitPaymentTransaction = new Transaction(
-                            "splitPayment",
-                            timestamp,
-                            description
-                    );
-                    splitPaymentTransaction.setCurrency(currency);
-                    splitPaymentTransaction.setAmount(share);
-                    splitPaymentTransaction.setInvolvedIBANs(involvedIBANs);
-                    user.addTransaction(splitPaymentTransaction);
-                }
-            }
-        } else {
-            for (String iban : accountsForSplit) {
-                Account account = findAccountByIBANGlobally(iban);
-                if (account == null) {
-                    continue;
-                }
-                User user = findUserByAccount(account.getAccountNumber());
-                if (user != null) {
-                    Transaction failedSplitPayment = new Transaction(
-                            "payNoFunds",
-                            timestamp,
-                            "Split payment failed due to insufficient funds"
-                    );
-                    user.addTransaction(failedSplitPayment);
-                }
+            User user = findUserByAccount(account.getAccountNumber());
+            if (user != null) {
+                Transaction failedTransaction =
+                        new Transaction("payNoFunds", timestamp,
+                                "Split payment failed due to insufficient funds");
+                user.addTransaction(failedTransaction);
             }
         }
     }
 
-
-    private void handleReport(CommandInput command) {
+    /**
+     * Handles generating a report for a specific account.
+     *
+     * @param command The command containing account details and report parameters.
+     */
+    private void handleReport(final CommandInput command) {
         String iban = command.getAccount();
         int startTimestamp = command.getStartTimestamp();
         int endTimestamp = command.getEndTimestamp();
@@ -987,82 +949,8 @@ public class CommandProcessor {
             return;
         }
 
-        ObjectNode reportOutput = objectMapper.createObjectNode();
-        reportOutput.put("IBAN", account.getAccountNumber());
-        reportOutput.put("balance", account.getBalance());
-        reportOutput.put("currency", account.getCurrency());
+        ObjectNode reportOutput = account.generateAccountReport(user, startTimestamp, endTimestamp);
 
-        ArrayNode transactionsArray = objectMapper.createArrayNode();
-
-        for (Transaction transaction : user.getTransactions()) {
-            if (transaction.getTimestamp() >= startTimestamp && transaction.getTimestamp() <= endTimestamp) {
-                if ("savings".equalsIgnoreCase(account.getAccountType())) {
-                    if (!"interestIncome".equalsIgnoreCase(transaction.getType()) &&
-                            !"changeInterestRate".equalsIgnoreCase(transaction.getType())) {
-                        continue;
-                    }
-                }
-
-                ObjectNode transactionNode = objectMapper.createObjectNode();
-                transactionNode.put("timestamp", transaction.getTimestamp());
-                transactionNode.put("description", transaction.getDescription());
-
-                switch (transaction.getType()) {
-                    case "addAccount":
-                    case "addCard":
-                    case "deleteCard":
-                    case "checkCardStatus":
-                    case "changeInterestRate":
-                        if (transaction.getCardNumber() != null) {
-                            transactionNode.put("card", transaction.getCardNumber());
-                        }
-                        if (transaction.getEmail() != null) {
-                            transactionNode.put("cardHolder", transaction.getEmail());
-                        }
-                        if (transaction.getAccountNumber() != null) {
-                            transactionNode.put("account", transaction.getAccountNumber());
-                        }
-                        break;
-
-                    case "paySucessful":
-                    case "payNoFunds":
-                    case "PayOnetime":
-                    case "payFrosen":
-                    case "splitPayment":
-                    case "splitPaymentFailed":
-                        if (transaction.getAmount() > 0) {
-                            transactionNode.put("amount", transaction.getAmount());
-                        }
-                        if (transaction.getCommerciant() != null) {
-                            transactionNode.put("commerciant", transaction.getCommerciant());
-                        }
-                        break;
-
-                    case "sendMoney":
-                        if (transaction.getSenderIBAN() != null) {
-                            transactionNode.put("senderIBAN", transaction.getSenderIBAN());
-                        }
-                        if (transaction.getReceiverIBAN() != null) {
-                            transactionNode.put("receiverIBAN", transaction.getReceiverIBAN());
-                        }
-                        if (transaction.getAmount() > 0) {
-                            String amountWithCurrencySend = String.format("%.2f", transaction.getAmount()) + " " + transaction.getCurrency();
-                            transactionNode.put("amount", amountWithCurrencySend);
-                        }
-                        String transferType = user.getEmail().equals(transaction.getEmail()) ? "sent" : "received";
-
-                        if (transferType != null) {
-                            transactionNode.put("transferType", transferType);
-                        }
-                        break;
-
-                    default:
-                        break;
-                }
-                transactionsArray.add(transactionNode);
-            }
-        }
-        reportOutput.set("transactions", transactionsArray);
         ObjectNode finalReport = objectMapper.createObjectNode();
         finalReport.put("command", reportType);
         finalReport.set("output", reportOutput);
@@ -1070,7 +958,12 @@ public class CommandProcessor {
         output.add(finalReport);
     }
 
-    private void handleSpendingsReport(CommandInput command) {
+    /**
+     * Handles generating a spendings report for a specific account.
+     *
+     * @param command The command containing account details and report parameters.
+     */
+    private void handleSpendingsReport(final CommandInput command) {
         String iban = command.getAccount();
         int startTimestamp = command.getStartTimestamp();
         int endTimestamp = command.getEndTimestamp();
@@ -1087,45 +980,8 @@ public class CommandProcessor {
             return;
         }
 
-        ObjectNode reportOutput = objectMapper.createObjectNode();
-        reportOutput.put("IBAN", account.getAccountNumber());
-        reportOutput.put("balance", account.getBalance());
-        reportOutput.put("currency", account.getCurrency());
-
-        ArrayNode transactionsArray = objectMapper.createArrayNode();
-
-        Map<String, Double> commerciantTotals = new HashMap<>();
-
-        for (Transaction transaction : user.getTransactions()) {
-            if (transaction.getTimestamp() >= startTimestamp && transaction.getTimestamp() <= endTimestamp) {
-                if ("paySucessful".equalsIgnoreCase(transaction.getType()) && transaction.getCommerciant() != null) {
-                    if (iban.equalsIgnoreCase(transaction.getAccountNumber())) {
-                        ObjectNode transactionNode = objectMapper.createObjectNode();
-                        transactionNode.put("timestamp", transaction.getTimestamp());
-                        transactionNode.put("description", transaction.getDescription());
-                        transactionNode.put("amount", transaction.getAmount());
-                        transactionNode.put("commerciant", transaction.getCommerciant());
-                        transactionsArray.add(transactionNode);
-                        commerciantTotals.put(transaction.getCommerciant(),
-                                commerciantTotals.getOrDefault(transaction.getCommerciant(), 0.0) + transaction.getAmount());
-                    }
-                }
-            }
-        }
-
-        ArrayNode commerciantsArray = objectMapper.createArrayNode();
-        List<String> sortedCommerciants = new ArrayList<>(commerciantTotals.keySet());
-        Collections.sort(sortedCommerciants);
-
-        for (String commerciant : sortedCommerciants) {
-            ObjectNode commerciantNode = objectMapper.createObjectNode();
-            commerciantNode.put("commerciant", commerciant);
-            commerciantNode.put("total", commerciantTotals.get(commerciant));
-            commerciantsArray.add(commerciantNode);
-        }
-
-        reportOutput.set("transactions", transactionsArray);
-        reportOutput.set("commerciants", commerciantsArray);
+        ObjectNode reportOutput = account.generateSpendingsReport(user,
+                startTimestamp, endTimestamp);
 
         ObjectNode finalReport = objectMapper.createObjectNode();
         finalReport.put("command", commandType);
@@ -1135,7 +991,12 @@ public class CommandProcessor {
         output.add(finalReport);
     }
 
-    private void handleUnknownCommand(CommandInput command) {
+    /**
+     * Handles an unknown command by adding it to the output with a status message.
+     *
+     * @param command The unknown command received.
+     */
+    private void handleUnknownCommand(final CommandInput command) {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", command.getCommand());
         objectNode.put("status", "Unknown command");
