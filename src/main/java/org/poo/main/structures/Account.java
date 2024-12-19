@@ -8,15 +8,22 @@ public class Account {
     private String currency;
     private String accountType;
     private double balance;
+
+    public void setInterestRate(double interestRate) {
+        this.interestRate = interestRate;
+    }
+
     private double interestRate;
+    private double minBalance;
     private List<Card> cards;
 
     public Account(String accountNumber, String currency, String accountType, double interestRate) {
         this.accountNumber = accountNumber;
         this.currency = currency;
         this.accountType = accountType;
-        this.balance = 0.0; // Balanța inițiala
+        this.balance = 0.0;
         this.interestRate = interestRate;
+        this.minBalance = 0.0;
         this.cards = new ArrayList<>();
     }
 
@@ -44,6 +51,14 @@ public class Account {
         return interestRate;
     }
 
+    public double getMinBalance() {
+        return minBalance;
+    }
+
+    public void setMinBalance(double minBalance) {
+        this.minBalance = minBalance;
+    }
+
     public List<Card> getCards() {
         return cards;
     }
@@ -60,6 +75,7 @@ public class Account {
                 ", accountType='" + accountType + '\'' +
                 ", balance=" + balance +
                 ", interestRate=" + interestRate +
+                ", minBalance=" + minBalance +
                 ", cards=" + cards +
                 '}';
     }

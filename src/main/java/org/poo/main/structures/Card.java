@@ -6,6 +6,10 @@ public class Card {
     private String status;
     private boolean isOneTime;
 
+    public void setCardNumber(String cardNumber) {
+        this.cardNumber = cardNumber;
+    }
+
     public Card(String cardNumber, String accountNumber, boolean isOneTime) {
         this.cardNumber = cardNumber;
         this.accountNumber = accountNumber;
